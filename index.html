@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>乙級冷凍空調 模擬器 </title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
+        
+        .controls-container { position: sticky; top: 5px; margin-bottom: 15px; width: 100%; max-width: 800px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
+        
+        .mode-selector-bar { background-color: #e2e8f0; padding: 10px 15px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #cbd5e1; }
+        .mode-selector-bar select { width: 100%; max-width: 400px; padding: 8px 12px; font-size: 16px; font-weight: bold; border-radius: 6px; border: 2px solid #1a365d; background-color: #fff; color: #1a365d; cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        .status-bar { background-color: #1a365d; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; flex-wrap: wrap; gap: 10px; }
+        .tools-bar { padding: 15px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: center; background-color: #ffffff; }
+        
+        .timer-display { font-family: monospace; font-size: 20px; letter-spacing: 2px; color: #ffc107; }
+        .wire-count { color: #4fd1c5; }
+        
+        .color-btn { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #ccc; cursor: pointer; }
+        .color-btn.active { border: 3px solid #000; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
+        
+        button.action-btn { padding: 8px 12px; font-size: 14px; cursor: pointer; border: none; border-radius: 5px; background-color: #2b6cb0; color: white; font-weight: bold; transition: background-color 0.2s; }
+        button.action-btn:hover { background-color: #2c5282; }
+        button.action-btn.check { background-color: #38a169; margin-left: auto; width: 100%; margin-top: 5px; padding: 12px;}
+        button.action-btn.check:hover { background-color: #2f855a; }
+        button.timer-btn { background-color: #4a5568; font-size: 13px; padding: 5px 10px;}
+        button.timer-btn:hover { background-color: #2d3748; }
+        
+        .wiring-board { position: relative; display: flex; justify-content: space-between; width: 100%; max-width: 800px; background: white; padding: 20px 5%; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; }
+        #svg-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        
+        .terminal-column { display: flex; flex-direction: column; gap: 4px; z-index: 5; }
+        .terminal { padding: 3px 6px; border: 1px solid #777; background-color: #e9ecef; cursor: pointer; border-radius: 3px; text-align: center; font-weight: bold; width: 70px; font-size: 12px; user-select: none; position: relative; z-index: 10; }
+        .terminal:hover { background-color: #d3d9df; }
+        .terminal.selected { background-color: #ffeb3b; border-color: #ff9800; box-shadow: 0 0 8px #ff9800; }
+        
+        #modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; }
+        #result-modal { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; box-shadow: 0 5px 20px rgba(0,0,0,0.3); z-index: 1000; width: 90%; max-width: 650px; max-height: 85vh; overflow-y: auto; box-sizing: border-box; }
+        .correct-text { color: #28a745; font-weight: bold; }
+        .error-text { color: #dc3545; font-weight: bold; }
+        
+        @media (max-width: 480px) { .terminal { width: 55px; font-size: 10px; padding: 3px 4px; } .status-bar { flex-direction: column; text-align: center; } .wiring-board { padding: 15px 1%; } }
+    </style>
+</head>
+<body>
+
+    <div class="controls-container">
+        <!-- 新增下拉選單區塊 -->
+        <div class="mode-selector-bar">
+            <select id="mode-select" onchange="switchMode()">
+                <option value="chiller">冰水主機 Y-Y 啟動控制 </option>
+                <option value="freezer">冷凍冷藏庫控制電路</option>
+            </select>
+        </div>
+
+        <div class="status-bar">
+            <div><span class="wire-count" id="wire-count-display">已用線數：0 條</span></div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span class="timer-display" id="timer-display">00:00:00</span>
+                <button class="action-btn timer-btn" id="start-pause-btn" onclick="toggleTimer()">開始</button>
+                <button class="action-btn timer-btn" onclick="resetTimer()">重置</button>
+            </div>
+        </div>
+        
+        <div class="tools-bar">
+            <div style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: center;">
+                <label style="font-size: 14px;"><b>選擇線色：</b></label>
+                <div class="color-btn active" style="background-color: #ffcc00;" data-color="#ffcc00" onclick="selectColor(this)"></div>
+                <div class="color-btn" style="background-color: black;" data-color="black" onclick="selectColor(this)"></div>
+                <div class="color-btn" style="background-color: red;" data-color="red" onclick="selectColor(this)"></div>
+                <div class="color-btn" style="background-color: blue;" data-color="blue" onclick="selectColor(this)"></div>
+                <div class="color-btn" style="background-color: green;" data-color="green" onclick="selectColor(this)"></div>
+            </div>
+            <button class="action-btn" onclick="clearWires()" style="width: 100%;">清除所有接線</button>
+            <button class="action-btn check" onclick="checkAnswers()">送出報驗</button>
+        </div>
+    </div>
+
+    <div class="wiring-board" id="board">
+        <svg id="svg-canvas"></svg>
+        <div class="terminal-column" id="col-left"></div>
+        <div class="terminal-column" id="col-right"></div>
+    </div>
+
+    <div id="modal-overlay"></div>
+    <div id="result-modal">
+        <h2 id="modal-title" style="margin-top:0; border-bottom: 2px solid #ccc; padding-bottom: 10px; font-size: 18px;">報驗分析報告</h2>
+        <div id="modal-content" style="line-height: 1.6; font-size: 14px;"></div>
+        <div style="text-align: right; margin-top: 20px;"><button onclick="closeModal()" class="action-btn" style="width: 100%;">關閉並繼續修改</button></div>
+    </div>
+
+    <script>
+        // ===  ===
+        const circuitData = {
+            chiller: {
+                left: ['R_L', 'S_L', 'T_L', 'K1', 'L1_1', 'K3', 'L3', 'E', 'L1_2', 'L2', '2C1-1', '2C1-2', '2C1-3', '2C1-4', '2C2-1', '2C2-2', '2C2-3', '2C2-4', '2C2-5', '3X-1', '3X-2', '3X-3', '3X-4', '3X-5', '3X-6', '63D-1', '63D-2', '63Q-1', '63Q-2', '63Q-3', '63Q-4', '63Q-5', '52C1-1', '52C1-2', '52C1-3', '52C1-4', '52C2-1', '52C2-2', '52C2-3', '52C2-4', '23C-1', '23C-2', '23C-3', '23C-4', '26W-1', '26W-2', '51C1-1', '51C1-2', '51C2-1', '51C2-2'],
+                right: ['R_R1', 'S_R', 'T_R1', 'VS-V1', 'VS-V2', 'V-V1', 'V-V2', 'R_R2', 'T_R2', 'AS-A1', 'AS-A2', 'A-A1', 'A-A2', 'GL-1', 'GL-2', 'RL1-1', 'RL1-2', 'RL2-1', 'RL2-2', 'WL-1', 'WL-2', 'ON-1', 'ON-2', 'OFF-1', 'OFF-2', 'FS-1', 'FS-2', 'CCH-1', 'CCH-2', '20C2-1', '20C2-2', '20C1-1', '20C1-2', '20S-1', '20S-2'],
+                nodes: [
+                    { name: "VS 電壓切換 (R相)", points: ['R_L', 'R_R1'] },
+                    { name: "VS 電壓切換 (S相)", points: ['S_L', 'S_R'] },
+                    { name: "VS 電壓切換 (T相)", points: ['T_L', 'T_R1'] },
+                    { name: "V 電壓表 (V1)", points: ['VS-V1', 'V-V1'] },
+                    { name: "V 電壓表 (V2)", points: ['VS-V2', 'V-V2'] },
+                    { name: "AS 電流切換 (R相輸入)", points: ['K1', 'R_R2'] },
+                    { name: "AS 電流切換 (T相輸入)", points: ['K3', 'T_R2'] },
+                    { name: "CT接地與儀表共地", points: ['L1_1', 'L3', 'E', 'AS-A2', 'A-A2'] },
+                    { name: "A 電流表 (A1)", points: ['AS-A1', 'A-A1'] },
+                    { name: "L2火線進線分流", points: ['L2', 'FS-1', '63Q-1'] },
+                    { name: "流動開關輸出", points: ['FS-2', '26W-1'] },
+                    { name: "防凍開關輸出", points: ['26W-2', 'OFF-1'] },
+                    { name: "停止鈕輸出 / 3X自保進線", points: ['OFF-2', 'ON-1', '3X-3'] },
+                    { name: "ON啟動後總線 / 供應63Q OT", points: ['ON-2', '3X-4', '3X-5', '63Q-4'] },
+                    { name: "63Q過溫OT輸出", points: ['63Q-5', '63D-1'] },
+                    { name: "63D高低壓輸出", points: ['63D-2', '51C1-1'] },
+                    { name: "過載電驛串聯", points: ['51C1-2', '51C2-1'] },
+                    { name: "過載全數通過，激磁3X", points: ['51C2-2', '3X-1'] },
+                    { name: "3X啟動後供電給溫控與卸載", points: ['3X-6', '23C-1', '20C1-1'] },
+                    { name: "製冷呼叫大網", points: ['23C-3', '2C1-3', '20S-1', '2C1-1', '52C1-1', 'RL1-1', '2C2-1', 'WL-1'] },
+                    { name: "2C1延遲到達 - 啟動第二台壓縮機", points: ['2C1-4', '52C2-1', 'RL2-1'] },
+                    { name: "溫度到達/卸載定時", points: ['23C-4', '20C2-1'] },
+                    { name: "70% 容量卸載", points: ['2C2-4', '20C2-2'] },
+                    { name: "40% 容量卸載", points: ['2C2-5', '20C1-2'] },
+                    { name: "CCH加熱器與待機燈供電", points: ['63Q-2', 'CCH-1', 'GL-1'] },
+                    { name: "L1水線總網", points: ['L1_2', '3X-2', '23C-2', '2C1-2', '52C1-2', 'RL1-2', '2C2-2', '52C2-2', 'RL2-2', 'WL-2', '20S-2', '2C2-3', 'CCH-2', 'GL-2', '52C1-4', '52C2-4'] },
+                    { name: "加熱器中繼輔助接點", points: ['63Q-3', '52C1-3', '52C2-3'] }
+                ]
+            },
+            freezer: {
+                left: ['DF-1', 'DF-2', '52CF-1', '52CF-2', '52F-1', '52F-2', '52F-3', '52F-4', '52C-1', '52C-2', '52C-3', '52C-4', '52C-5', '52C-6', '52C-7', '52C-8', '52H-1', '52H-2', 'R1-1', 'R1-2', 'R1-3', 'R1-4', 'T1-1', 'T1-2', 'T1-3', 'T1-4', 'T2-1', 'T2-2', 'T2-3', 'T2-4', 'DT-1', 'DT-2', 'DT-3', 'DT-4', 'DT-5', 'DT-6', 'DT-7', '51CF-1', '51CF-2', '51CF-3', '51F-1', '51F-2', '51F-3', '51C-1', '51C-2', '51C-3'],
+                right: ['WL-1', 'WL-2', 'RL1-1', 'RL1-2', 'GL1-1', 'GL1-2', 'YL-1', 'YL-2', 'GL2-1', 'GL2-2', 'RL2-1', 'RL2-2', 'CS-1', 'CS-2', 'LSV-1', 'LSV-2', '63D-1', '63D-2', '63D-3', '63Q-1', '63Q-2', '63Q-3', '63Q-4', '63Q-5', 'CCH-1', 'CCH-2', 'OH-1', 'OH-2', '23C-1', '23C-2', '23C-3'],
+                nodes: [
+                    { name: "【DF 栓形保險絲】 R相控制主進線", points: ['DF-1', 'WL-1', '52C-5', 'CS-1', '52C-3', '63D-1'] },
+                    { name: "【CS 壓縮機控制電源選擇開關】 啟動迴路", points: ['CS-2', 'DT-1', 'DT-3'] },
+                    { name: "【CCH 曲軸箱加熱器】 負載迴路", points: ['52C-6', 'GL2-1', 'CCH-1'] },
+                    { name: "【DT 除霜定時器】 輸出至 【52C 壓縮機電磁開關】", points: ['DT-4', '52C-7'] },
+                    { name: "【52C 壓縮機電磁開關】 至 【OH 除霜過熱保護】", points: ['52C-8', 'OH-1'] },
+                    { name: "【OH 除霜過熱保護】 輸出至除霜負載", points: ['OH-2', '52H-1', 'RL2-1'] },
+                    { name: "【DT 除霜定時器】 製冷輸出至 【R1 輔助電驛】", points: ['DT-5', 'R1-3'] },
+                    { name: "【R1 輔助電驛】 至 【23C 溫度開關】", points: ['R1-4', '23C-1'] },
+                    { name: "【23C 溫度開關】 呼叫運轉至 【LSV 液管電磁閥】", points: ['23C-2', 'LSV-1'] },
+                    { name: "【23C 溫度開關】 降溫完成指示", points: ['23C-3', 'GL1-1'] },
+                    { name: "【52C 壓縮機電磁開關】 供電給 【63Q 油壓開關】", points: ['52C-4', '63Q-1'] },
+                    { name: "【63D 高低壓開關】 正常輸出至 【63Q 油壓開關】", points: ['63D-3', '63Q-3'] }, 
+                    { name: "高低壓/油壓/過載 故障跳脫警報連鎖迴路", points: ['63D-2', '63Q-4', '51F-2', '51CF-2', '51C-2', 'R1-1', 'YL-1'] }, 
+                    { name: "【63Q 油壓開關】 正常輸出至 【51F 冷庫風扇過載電驛】", points: ['63Q-5', '51F-1'] },
+                    { name: "【51F 冷庫風扇過載電驛】 串聯 【51CF 冷卻風扇過載電驛】", points: ['51F-3', '51CF-1'] },
+                    { name: "【51CF 冷卻風扇過載電驛】 串聯 【51C 壓縮機過載電驛】", points: ['51CF-3', '51C-1'] },
+                    { name: "過載迴路通過 進入 【T1 時間電驛(延遲180秒)】", points: ['51C-3', 'T1-1', 'T1-4'] }, 
+                    { name: "【T1 時間電驛】 延遲180秒啟動次級控制線路", points: ['T1-3', 'T2-1', 'T2-3', '52CF-1', 'DT-6', '52F-3'] }, 
+                    { name: "【T2 時間電驛】 延遲5秒啟動壓縮機", points: ['T2-4', '52C-1', 'RL1-1'] }, 
+                    { name: "【52F 冷庫風扇電磁開關】 延遲並聯點", points: ['DT-7', '52F-4', '52F-1'] },
+                    { name: "【DF 栓形保險絲】 T相總迴路 (中性線)", points: ['DF-2', 'WL-2', 'GL2-2', 'CCH-2', 'DT-2', '52H-2', 'RL2-2', 'LSV-2', 'GL1-2', '63Q-2', 'R1-2', 'YL-2', 'T1-2', 'T2-2', '52C-2', 'RL1-2', '52CF-2', '52F-2'] }
+                ]
+            }
+        };
+
+        // 
+        let activeMode = 'chiller';
+        let leftTerminals = circuitData[activeMode].left;
+        let rightTerminals = circuitData[activeMode].right;
+        let standardNodes = circuitData[activeMode].nodes;
+
+        let timerInterval = null; 
+        let elapsedSeconds = 0; 
+        let isTimerRunning = false;
+        
+        let currentColor = '#ffcc00'; 
+        let firstSelected = null; 
+        let connections = [];
+
+        // ===  ===
+        function switchMode() {
+            activeMode = document.getElementById('mode-select').value;
+            leftTerminals = circuitData[activeMode].left;
+            rightTerminals = circuitData[activeMode].right;
+            standardNodes = circuitData[activeMode].nodes;
+            
+            clearWires();
+            resetTimer();
+            initTerminals();
+        }
+
+        // ===  ===
+        function formatTime(seconds) { 
+            const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); 
+            const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0'); 
+            const s = (seconds % 60).toString().padStart(2, '0'); 
+            return `${h}:${m}:${s}`; 
+        }
+        
+        function toggleTimer(forceStart = false) {
+            const btn = document.getElementById('start-pause-btn');
+            // 
+            if (isTimerRunning && !forceStart) { 
+                clearInterval(timerInterval); 
+                isTimerRunning = false; 
+                btn.innerText = "繼續"; 
+                btn.style.backgroundColor = "#38a169"; 
+            }
+            // 
+            else if (!isTimerRunning) { 
+                timerInterval = setInterval(() => { 
+                    elapsedSeconds++; 
+                    document.getElementById('timer-display').innerText = formatTime(elapsedSeconds); 
+                }, 1000); 
+                isTimerRunning = true; 
+                btn.innerText = "暫停"; 
+                btn.style.backgroundColor = "#e53e3e"; 
+            }
+        }
+        
+        function resetTimer() { 
+            clearInterval(timerInterval); 
+            isTimerRunning = false; 
+            elapsedSeconds = 0; 
+            document.getElementById('timer-display').innerText = "00:00:00"; 
+            const btn = document.getElementById('start-pause-btn'); 
+            btn.innerText = "開始"; 
+            btn.style.backgroundColor = "#4a5568"; 
+        }
+
+        // ===  ===
+        function initTerminals() {
+            const leftCol = document.getElementById('col-left'); 
+            const rightCol = document.getElementById('col-right');
+            
+            // 
+            leftCol.innerHTML = '';
+            rightCol.innerHTML = '';
+
+            leftTerminals.forEach(id => { 
+                let div = document.createElement('div'); 
+                div.className = 'terminal'; 
+                div.id = id; 
+                div.innerText = id.replace(/_.*$/, ''); 
+                div.onclick = function() { clickTerminal(this); }; 
+                leftCol.appendChild(div); 
+            });
+            
+            rightTerminals.forEach(id => { 
+                let div = document.createElement('div'); 
+                div.className = 'terminal'; 
+                div.id = id; 
+                div.innerText = id.replace(/_.*$/, ''); 
+                div.onclick = function() { clickTerminal(this); }; 
+                rightCol.appendChild(div); 
+            });
+        }
+
+        function updateWireCount() { 
+            document.getElementById('wire-count-display').innerText = `已用線數：${connections.length} 條`; 
+        }
+        
+        function selectColor(element) { 
+            document.querySelectorAll('.color-btn').forEach(btn => btn.classList.remove('active')); 
+            element.classList.add('active'); 
+            currentColor = element.getAttribute('data-color'); 
+            if (firstSelected) { 
+                firstSelected.classList.remove('selected'); 
+                firstSelected = null; 
+            } 
+        }
+        
+        function clickTerminal(element) {
+            // 
+            if (elapsedSeconds === 0 && !isTimerRunning) {
+                toggleTimer(true); // 
+            }
+
+            if (!firstSelected) { 
+                firstSelected = element; 
+                element.classList.add('selected'); 
+            } else {
+                if (firstSelected.id === element.id) { 
+                    firstSelected.classList.remove('selected'); 
+                    firstSelected = null; 
+                    return; 
+                }
+                
+                let terminalA = firstSelected.id; 
+                let terminalB = element.id;
+                let existsIndex = connections.findIndex(conn => (conn.from === terminalA && conn.to === terminalB) || (conn.from === terminalB && conn.to === terminalA));
+                
+                if (existsIndex === -1) {
+                    let countA = connections.filter(c => c.from === terminalA || c.to === terminalA).length;
+                    let countB = connections.filter(c => c.from === terminalB || c.to === terminalB).length;
+                    
+                    if (countA >= 2 || countB >= 2) { 
+                        alert(`【配線錯誤】端子已經接滿兩條線了！實務上一個端子最多只能壓接兩條線，請尋找其他共同點跳線。`); 
+                        firstSelected.classList.remove('selected'); 
+                        firstSelected = null; 
+                        return; 
+                    }
+                    connections.push({ from: terminalA, to: terminalB, color: currentColor });
+                } else { 
+                    connections.splice(existsIndex, 1); 
+                }
+                updateWireCount(); 
+                drawLines(); 
+                firstSelected.classList.remove('selected'); 
+                firstSelected = null;
+            }
+        }
+        
+        function drawLines() {
+            const svg = document.getElementById('svg-canvas'); 
+            const board = document.getElementById('board'); 
+            svg.innerHTML = ''; 
+            const boardRect = board.getBoundingClientRect();
+            
+            connections.forEach(conn => {
+                const elA = document.getElementById(conn.from); 
+                const elB = document.getElementById(conn.to);
+                if (elA && elB) {
+                    const rectA = elA.getBoundingClientRect(); const rectB = elB.getBoundingClientRect();
+                    const relativeLeftA = rectA.left - boardRect.left; const relativeLeftB = rectB.left - boardRect.left;
+                    const isLeftA = relativeLeftA < (boardRect.width / 2); const isLeftB = relativeLeftB < (boardRect.width / 2);
+                    const x1 = isLeftA ? (rectA.right - boardRect.left) : (rectA.left - boardRect.left); const y1 = rectA.top + rectA.height / 2 - boardRect.top;
+                    const x2 = isLeftB ? (rectB.right - boardRect.left) : (rectB.left - boardRect.left); const y2 = rectB.top + rectB.height / 2 - boardRect.top;
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    
+                    if (isLeftA === isLeftB) {
+                        const distance = Math.abs(y1 - y2); const bowOffset = Math.min(120, Math.max(30, distance * 0.4));
+                        const controlX = isLeftA ? (x1 + bowOffset) : (x1 - bowOffset); const controlY = (y1 + y2) / 2;
+                        path.setAttribute('d', `M ${x1} ${y1} Q ${controlX} ${controlY} ${x2} ${y2}`);
+                    } else { 
+                        const midX = (x1 + x2) / 2; 
+                        path.setAttribute('d', `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`); 
+                    }
+                    path.setAttribute('stroke', conn.color); path.setAttribute('stroke-width', '4'); path.setAttribute('fill', 'none'); path.setAttribute('stroke-linecap', 'round'); svg.appendChild(path);
+                }
+            });
+        }
+        
+        function clearWires() { 
+            connections = []; 
+            updateWireCount(); 
+            drawLines(); 
+            if (firstSelected) { firstSelected.classList.remove('selected'); firstSelected = null; } 
+        }
+
+        // ===  ===
+        function checkAnswers() {
+            if (connections.length === 0) { alert("目前沒有任何接線喔！請完成配線後再報驗。"); return; }
+            if (isTimerRunning) toggleTimer(); // 報驗時暫停時間
+            
+            let adjList = {}; 
+            connections.forEach(conn => { 
+                if (!adjList[conn.from]) adjList[conn.from] = []; 
+                if (!adjList[conn.to]) adjList[conn.to] = []; 
+                adjList[conn.from].push(conn.to); 
+                adjList[conn.to].push(conn.from); 
+            });
+            
+            let visited = new Set(); 
+            let userNodes = [];
+            for (let node in adjList) {
+                if (!visited.has(node)) {
+                    let component = []; let queue = [node]; visited.add(node);
+                    while(queue.length > 0) { 
+                        let curr = queue.shift(); component.push(curr); 
+                        adjList[curr].forEach(neighbor => { 
+                            if (!visited.has(neighbor)) { visited.add(neighbor); queue.push(neighbor); } 
+                        }); 
+                    }
+                    if (component.length > 1) { userNodes.push(component.sort()); }
+                }
+            }
+            
+            let sortedUserStrings = userNodes.map(arr => arr.join(',')); 
+            let reportHTML = ""; 
+            let isPerfect = true; 
+            let matchedCount = 0;
+            
+            standardNodes.forEach((stdNode, index) => {
+                let stdArr = [...stdNode.points].sort(); let stdStr = stdArr.join(',');
+                if (sortedUserStrings.includes(stdStr)) { 
+                    matchedCount++; 
+                    reportHTML += `<div style="margin-bottom:8px;"><span class="correct-text">✅ ${stdNode.name}</span></div>`; 
+                } else {
+                    isPerfect = false; 
+                    let partialMatch = userNodes.filter(uNode => uNode.some(t => stdArr.includes(t)));
+                    reportHTML += `<div style="margin-bottom:8px; padding:8px; background:#fff3cd; border-left: 4px solid #fd7e14;"><span class="error-text">❌ ${stdNode.name}</span><br>`;
+                    let cleanStdArr = stdArr.map(id => id.replace(/_.*$/, '')); 
+                    reportHTML += `<span style="font-size:13px; color:#555;">標準應導通：${cleanStdArr.join(', ')}</span><br>`;
+                    if (partialMatch.length > 0) { 
+                        let cleanPartial = partialMatch.map(p => '[' + p.map(id => id.replace(/_.*$/, '')).join(', ') + ']'); 
+                        reportHTML += `<span style="font-size:13px; color:#c82333;">目前接線狀況：${cleanPartial.join(' 以及 ')}</span>`; 
+                    } else { 
+                        reportHTML += `<span style="font-size:13px; color:#c82333;">目前接線狀況：尚未佈線。</span>`; 
+                    }
+                    reportHTML += `</div>`;
+                }
+            });
+            
+            let standardStringsArray = standardNodes.map(n => [...n.points].sort().join(',')); 
+            let extraNodes = sortedUserStrings.filter(uStr => !standardStringsArray.includes(uStr));
+            
+            if (extraNodes.length > 0) {
+                isPerfect = false; reportHTML += `<hr><div style="margin-top:10px;"><span class="error-text">⚠️ 嚴重警告：發現異常連接 (短路或誤接)</span><ul>`;
+                extraNodes.forEach(eStr => { 
+                    let cleanExtra = eStr.split(',').map(id => id.replace(/_.*$/, '')).join(', '); 
+                    reportHTML += `<li style="font-size:13px; color:#dc3545;">異常群組: [${cleanExtra}]</li>`; 
+                }); 
+                reportHTML += `</ul></div>`;
+            }
+            
+            let titleElement = document.getElementById('modal-title');
+            if (isPerfect) { 
+                titleElement.innerHTML = "🎉 報驗通過：完美配線！ 🎉"; 
+                titleElement.style.color = "#28a745"; 
+                reportHTML = `<div style="font-size: 15px; font-weight:bold; margin-bottom: 15px; color:#2b6cb0;">⏱ 總耗時：${formatTime(elapsedSeconds)} | 🧵 總用線：${connections.length} 條</div><div style="font-size: 14px; font-weight:bold; margin-bottom: 15px;">控制迴路邏輯正確，所有 ${standardNodes.length} 個電氣節點都已導通，且無短路。</div>` + reportHTML; 
+            } else { 
+                titleElement.innerHTML = "🔧 報驗失敗：需除錯與修正"; 
+                titleElement.style.color = "#dc3545"; 
+                reportHTML = `<div style="font-weight:bold; margin-bottom: 15px;">完成進度: ${matchedCount} / ${standardNodes.length} 個節點正確。請參考下方報告修正：</div>` + reportHTML; 
+            }
+            
+            document.getElementById('modal-content').innerHTML = reportHTML; 
+            document.getElementById('modal-overlay').style.display = 'block'; 
+            document.getElementById('result-modal').style.display = 'block';
+        }
+        
+        function closeModal() { 
+            document.getElementById('modal-overlay').style.display = 'none'; 
+            document.getElementById('result-modal').style.display = 'none'; 
+        }
+        
+        // 
+        initTerminals(); 
+        window.addEventListener('resize', drawLines);
+    </script>
+</body>
+</html>
