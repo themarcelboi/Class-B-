@@ -3,10 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>乙級冷凍空調 模擬器 </title>
+    <title>中彰投分署 綠能智慧冷凍空調班 第一期</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
         
+        
+        body::before {
+            content: "中彰投分署";
+            position: fixed;
+            left: 6%; 
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 100px;
+            font-weight: 900;
+            color: rgba(0, 0, 0, 0.08); 
+            writing-mode: vertical-lr;
+            letter-spacing: 30px;
+            white-space: nowrap;
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        body::after {
+            content: "綠能智慧冷凍空調班\A第一期"; 
+            position: fixed;
+            right: 6%; 
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 70px;
+            font-weight: 900;
+            color: rgba(0, 0, 0, 0.08); 
+            writing-mode: vertical-rl;
+            letter-spacing: 15px;
+            white-space: pre; 
+            line-height: 1.4; 
+            text-align: center; 
+            z-index: -1;
+            pointer-events: none;
+        }
+
+        
+        @media (max-width: 1200px) {
+            body::before { font-size: 60px; left: 3%; letter-spacing: 15px; }
+            body::after { font-size: 50px; right: 3%; letter-spacing: 10px; }
+        }
+        @media (max-width: 800px) {
+            body::before { font-size: 35px; left: 2%; letter-spacing: 10px; }
+            body::after { font-size: 30px; right: 2%; letter-spacing: 5px; line-height: 1.2;}
+        }
+        
+
         .controls-container { position: sticky; top: 5px; margin-bottom: 15px; width: 100%; max-width: 800px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
         
         .mode-selector-bar { background-color: #e2e8f0; padding: 10px 15px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #cbd5e1; }
@@ -413,7 +459,7 @@
                 titleElement.style.color = "#28a745"; 
                 reportHTML = `<div style="font-size: 15px; font-weight:bold; margin-bottom: 15px; color:#2b6cb0;">⏱ 總耗時：${formatTime(elapsedSeconds)} | 🧵 總用線：${connections.length} 條</div><div style="font-size: 14px; font-weight:bold; margin-bottom: 15px;">控制迴路邏輯正確，所有 ${standardNodes.length} 個電氣節點都已導通，且無短路。</div>` + reportHTML; 
             } else { 
-                titleElement.innerHTML = "🔧 報驗失敗：需除錯與修正"; 
+                titleElement.innerHTML = "🔧 報驗失敗：需除錯與修正 (張老師離寫報告不遠囉!)"; 
                 titleElement.style.color = "#dc3545"; 
                 reportHTML = `<div style="font-weight:bold; margin-bottom: 15px;">完成進度: ${matchedCount} / ${standardNodes.length} 個節點正確。請參考下方報告修正：</div>` + reportHTML; 
             }
