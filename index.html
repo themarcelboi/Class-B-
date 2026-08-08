@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>中彰投分署 綠能智慧冷凍空調班 第一期</title>
+    <title>冷凍空調乙級 模擬器</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
-        
         
         body::before {
             content: "中彰投分署";
@@ -25,7 +24,7 @@
         }
 
         body::after {
-            content: "綠能智慧冷凍空調班\A第一期"; 
+            content: "第一期\A綠能智慧冷凍空調班"; 
             position: fixed;
             right: 6%; 
             top: 50%;
@@ -42,7 +41,6 @@
             pointer-events: none;
         }
 
-        
         @media (max-width: 1200px) {
             body::before { font-size: 60px; left: 3%; letter-spacing: 15px; }
             body::after { font-size: 50px; right: 3%; letter-spacing: 10px; }
@@ -52,7 +50,7 @@
             body::after { font-size: 30px; right: 2%; letter-spacing: 5px; line-height: 1.2;}
         }
         
-
+        
         .controls-container { position: sticky; top: 5px; margin-bottom: 15px; width: 100%; max-width: 800px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
         
         .mode-selector-bar { background-color: #e2e8f0; padding: 10px 15px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #cbd5e1; }
@@ -64,14 +62,14 @@
         .timer-display { font-family: monospace; font-size: 20px; letter-spacing: 2px; color: #ffc107; }
         .wire-count { color: #4fd1c5; }
         
-        .color-btn { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #ccc; cursor: pointer; }
+        .color-btn { width: 25px; height: 25px; border-radius: 50%; border: 2px solid #ccc; cursor: pointer; flex-shrink: 0; }
         .color-btn.active { border: 3px solid #000; box-shadow: 0 0 8px rgba(0,0,0,0.5); }
         
         button.action-btn { padding: 8px 12px; font-size: 14px; cursor: pointer; border: none; border-radius: 5px; background-color: #2b6cb0; color: white; font-weight: bold; transition: background-color 0.2s; }
         button.action-btn:hover { background-color: #2c5282; }
         button.action-btn.check { background-color: #38a169; margin-left: auto; width: 100%; margin-top: 5px; padding: 12px;}
         button.action-btn.check:hover { background-color: #2f855a; }
-        button.timer-btn { background-color: #4a5568; font-size: 13px; padding: 5px 10px;}
+        button.timer-btn { background-color: #4a5568; font-size: 13px; padding: 5px 10px; white-space: nowrap; }
         button.timer-btn:hover { background-color: #2d3748; }
         
         .wiring-board { position: relative; display: flex; justify-content: space-between; width: 100%; max-width: 800px; background: white; padding: 20px 5%; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); box-sizing: border-box; }
@@ -87,17 +85,24 @@
         .correct-text { color: #28a745; font-weight: bold; }
         .error-text { color: #dc3545; font-weight: bold; }
         
-        @media (max-width: 480px) { .terminal { width: 55px; font-size: 10px; padding: 3px 4px; } .status-bar { flex-direction: column; text-align: center; } .wiring-board { padding: 15px 1%; } }
+        @media (max-width: 480px) { 
+            .terminal { width: 55px; font-size: 10px; padding: 3px 4px; } 
+            .status-bar { flex-direction: column; text-align: center; } 
+            .wiring-board { padding: 15px 1%; } 
+            .tools-bar { flex-direction: column; }
+        }
     </style>
 </head>
 <body>
 
     <div class="controls-container">
-        <!-- 新增下拉選單區塊 -->
+        
         <div class="mode-selector-bar">
             <select id="mode-select" onchange="switchMode()">
-                <option value="chiller">冰水主機 Y-Y 啟動控制 </option>
-                <option value="freezer">冷凍冷藏庫控制電路</option>
+                <option value="chiller" selected>中訓 乙一 Y-Y</option>
+                <option value="freezer">中訓 乙一 冷凍冷藏</option>
+                <option value="chiller_image">桃訓 乙一 Y-Y</option>
+                <option value="freezer_image">桃訓 乙一 冷凍冷藏</option>
             </select>
         </div>
 
@@ -111,13 +116,16 @@
         </div>
         
         <div class="tools-bar">
-            <div style="display: flex; align-items: center; gap: 10px; width: 100%; justify-content: center;">
+            <div style="display: flex; align-items: center; gap: 8px; width: 100%; justify-content: center; flex-wrap: wrap;">
                 <label style="font-size: 14px;"><b>選擇線色：</b></label>
                 <div class="color-btn active" style="background-color: #ffcc00;" data-color="#ffcc00" onclick="selectColor(this)"></div>
                 <div class="color-btn" style="background-color: black;" data-color="black" onclick="selectColor(this)"></div>
                 <div class="color-btn" style="background-color: red;" data-color="red" onclick="selectColor(this)"></div>
                 <div class="color-btn" style="background-color: blue;" data-color="blue" onclick="selectColor(this)"></div>
                 <div class="color-btn" style="background-color: green;" data-color="green" onclick="selectColor(this)"></div>
+                
+                <button class="action-btn timer-btn" style="margin-left: 10px;" onclick="undoWire()">回上一步</button>
+                <button class="action-btn timer-btn" onclick="clearColor()">清除此線色</button>
             </div>
             <button class="action-btn" onclick="clearWires()" style="width: 100%;">清除所有接線</button>
             <button class="action-btn check" onclick="checkAnswers()">送出報驗</button>
@@ -130,6 +138,12 @@
         <div class="terminal-column" id="col-right"></div>
     </div>
 
+    
+    <div style="text-align: center; margin-top: 30px; margin-bottom: 20px; color: #718096; font-size: 14px; font-weight: bold; letter-spacing: 1px; line-height: 1.8;">
+        中彰投分署 綠能智慧冷凍空調班 第一期<br>
+        指導老師：張軒齊 老師、蔡淨英 老師、黃世昌 老師、林茗富 老師 ｜ 學生：陳宣澄
+    </div>
+
     <div id="modal-overlay"></div>
     <div id="result-modal">
         <h2 id="modal-title" style="margin-top:0; border-bottom: 2px solid #ccc; padding-bottom: 10px; font-size: 18px;">報驗分析報告</h2>
@@ -138,8 +152,41 @@
     </div>
 
     <script>
-        // ===  ===
+        
         const circuitData = {
+            chiller_image: {
+                left: ['R_L', 'S_L', 'T_L', 'K1_L', 'K3_L', 'L1_L1', 'L3_L', 'G_L', 'L1_L2', 'L2_L', 'FS_L1', 'FS_L2', '26W_L1', '26W_L2', '63Q-1_L', '63Q-5_L', '63Q-220V_L', 'CCH_L1', 'CCH_L2', '52C1-a_L1', '52C1-a_L2', '52C2-a_L1', '52C2-a_L2', '3X/a1_L1', '3X/a1_L2', '3X/a2_L1', '3X/a2_L2', '63Q/L2_L', '63Q/L1_L', '63D_L1', '63D_L2', '51C1_L1', '51C1_L2', '51C2_L1', '51C2_L2', '3X_L1', '3X_L2', '23C-U_L', '23C-V_L', '23C-L1_L', '23C-H2_L', '52C1_L1', '52C1_L2', '2C1_L1', '2C1_L2', '2C1/a_L1', '2C1/a_L2', '52C2_L1', '52C2_L2', '20S_L1', '20S_L2', '2C2_L1', '2C2_L2', '20C1_L1', '20C1_L2', '20C2_L1', '20C2_L2', '2C2/C_L', '2C2/b_L', '2C2/a_L'],
+                right: ['R_R1', 'S_R', 'T_R1', 'V1_R1', 'V2_R1', 'V1_R2', 'V2_R2', 'R_R2', 'T_R2', 'A1_R1', 'A2_R1', 'A1_R2', 'A2_R2', 'GL_R1', 'GL_R2', 'RL1_R1', 'RL1_R2', 'RL2_R1', 'RL2_R2', 'WL_R1', 'WL_R2', 'ON_R1', 'ON_R2', 'OFF_R1', 'OFF_R2'],
+                nodes: [
+                    { name: "群組: [R, R]", points: ['R_L', 'R_R1'] },
+                    { name: "群組: [S, S]", points: ['S_L', 'S_R'] },
+                    { name: "群組: [T, T]", points: ['T_L', 'T_R1'] },
+                    { name: "群組: [V1, V1]", points: ['V1_R1', 'V1_R2'] },
+                    { name: "群組: [V2, V2]", points: ['V2_R1', 'V2_R2'] },
+                    { name: "群組: [K1, R]", points: ['K1_L', 'R_R2'] },
+                    { name: "群組: [K3, T]", points: ['K3_L', 'T_R2'] },
+                    { name: "群組: CT與A表共地", points: ['L1_L1', 'L3_L', 'G_L', 'A2_R1', 'A2_R2'] },
+                    { name: "群組: [A1, A1]", points: ['A1_R1', 'A1_R2'] },
+                    { name: "群組: [63Q-1, FS, L2]", points: ['63Q-1_L', 'FS_L1', 'L2_L'] },
+                    { name: "群組: [FS, 26W]", points: ['FS_L2', '26W_L1'] },
+                    { name: "群組: [26W, OFF]", points: ['26W_L2', 'OFF_R2'] },
+                    { name: "群組: [63Q-5, CCH, GL]", points: ['63Q-5_L', 'CCH_L1', 'GL_R1'] },
+                    { name: "群組: [52C1-a, 52C2-a, 63Q-220V]", points: ['52C1-a_L1', '52C2-a_L1', '63Q-220V_L'] },
+                    { name: "群組: [20S, 23C-V, 2C1, 2C2/C, 2C2, 3X, 52C1-a, 52C1, 52C2-a, 52C2, CCH, GL, L1, RL1, RL2, WL]", points: ['20S_L2', '23C-V_L', '2C1_L2', '2C2/C_L', '2C2_L2', '3X_L2', '52C1-a_L2', '52C1_L2', '52C2-a_L2', '52C2_L2', 'CCH_L2', 'GL_R2', 'L1_L2', 'RL1_R2', 'RL2_R2', 'WL_R2'] },
+                    { name: "群組: [3X/a1, 3X/a2, 63Q/L2, ON]", points: ['3X/a1_L1', '3X/a2_L1', '63Q/L2_L', 'ON_R1'] },
+                    { name: "群組: [3X/a1, ON, OFF]", points: ['3X/a1_L2', 'ON_R2', 'OFF_R1'] },
+                    { name: "群組: [20C1, 23C-U, 3X/a2]", points: ['20C1_L1', '23C-U_L', '3X/a2_L2'] },
+                    { name: "群組: [63Q/L1, 63D]", points: ['63Q/L1_L', '63D_L1'] },
+                    { name: "群組: [63D, 51C1]", points: ['63D_L2', '51C1_L1'] },
+                    { name: "群組: [51C1, 51C2]", points: ['51C1_L2', '51C2_L1'] },
+                    { name: "群組: [51C2, 3X]", points: ['51C2_L2', '3X_L1'] },
+                    { name: "群組: [主製冷呼叫網: 20S, 23C-L1...]", points: ['20S_L1', '23C-L1_L', '2C1/a_L1', '2C1_L1', '2C2_L1', '52C1_L1', 'RL1_R1', 'WL_R1'] },
+                    { name: "群組: [20C2, 23C-H2]", points: ['20C2_L1', '23C-H2_L'] },
+                    { name: "群組: [2C1/a, 52C2, RL2]", points: ['2C1/a_L2', '52C2_L1', 'RL2_R1'] },
+                    { name: "群組: [20C1, 2C2/b]", points: ['20C1_L2', '2C2/b_L'] },
+                    { name: "群組: [20C2, 2C2/a]", points: ['20C2_L2', '2C2/a_L'] }
+                ]
+            },
             chiller: {
                 left: ['R_L', 'S_L', 'T_L', 'K1', 'L1_1', 'K3', 'L3', 'E', 'L1_2', 'L2', '2C1-1', '2C1-2', '2C1-3', '2C1-4', '2C2-1', '2C2-2', '2C2-3', '2C2-4', '2C2-5', '3X-1', '3X-2', '3X-3', '3X-4', '3X-5', '3X-6', '63D-1', '63D-2', '63Q-1', '63Q-2', '63Q-3', '63Q-4', '63Q-5', '52C1-1', '52C1-2', '52C1-3', '52C1-4', '52C2-1', '52C2-2', '52C2-3', '52C2-4', '23C-1', '23C-2', '23C-3', '23C-4', '26W-1', '26W-2', '51C1-1', '51C1-2', '51C2-1', '51C2-2'],
                 right: ['R_R1', 'S_R', 'T_R1', 'VS-V1', 'VS-V2', 'V-V1', 'V-V2', 'R_R2', 'T_R2', 'AS-A1', 'AS-A2', 'A-A1', 'A-A2', 'GL-1', 'GL-2', 'RL1-1', 'RL1-2', 'RL2-1', 'RL2-2', 'WL-1', 'WL-2', 'ON-1', 'ON-2', 'OFF-1', 'OFF-2', 'FS-1', 'FS-2', 'CCH-1', 'CCH-2', '20C2-1', '20C2-2', '20C1-1', '20C1-2', '20S-1', '20S-2'],
@@ -173,6 +220,33 @@
                     { name: "加熱器中繼輔助接點", points: ['63Q-3', '52C1-3', '52C2-3'] }
                 ]
             },
+            freezer_image: {
+                left: ['L2_L', '52CF_L1', '52H_L1', 'LSV_L', 'R1_L1', 'T1_L1', 'T2_L', '52C_L', '52F_L1', 'L1_L', '52C/b1_L1', '52C/a_L1', '52C/b1_L2', 'DT_L', 'DT-8-C_L', 'DT-5-b_L', 'R1/b_L', '23C/b_L', '23C/a_L', 'DT-6-a_L', '52C/b2_L', '52H_L2', 'T1/a_L1', 'T1_L2', 'T1/a_L2', '52CF_L2', 'DT/1_L', 'T2/a_L', '52F_L2', '52F/a_L', '52C/a_L2', '63D/b_L', '63Q/L1_L', '51F/b_L', '51CF/b_L', '63D/a_L', '51CF/a_L', '51C/a_L', 'R1_L2'],
+                right: ['WL_R1', 'GL2_R1', 'DT_R', 'RL2_R1', 'GL1_R1', 'YL_R1', 'RL1_R1', 'CCH_R1', '63Q-220V_R', 'WL_R2', 'CS/S_R', '63D/C_R', 'GL2_R2', 'CCH_R2', 'CS/ON_R', 'R1/b_R', '23C/C_R', 'LSV_R', 'GL1_R2', '52C/b2_R', 'OH_R1', 'OH_R2', 'RL2_R2', '51C/b_R', 'T2_R', 'T2/a_R', '52F/a_R', '52C_R', 'RL1_R2', 'DT/3_R', '63Q/1_R', '63Q/L2_R', '51F/C_R', '51CF/C_R', '51C/C_R', '63Q/a_R', '51F/a_R', 'YL_R2'],
+                nodes: [
+                    { name: "群組: [52CF, 52C, 52F, 52H, 63Q-220V, CCH, DT, GL1, GL2, L2, LSV, R1, RL1, RL2, T1, T2, WL, YL]", points: ['L2_L', '52CF_L1', '52H_L1', 'LSV_L', 'R1_L1', 'T1_L1', 'T2_L', '52C_L', '52F_L1', 'WL_R1', 'GL2_R1', 'DT_R', 'RL2_R1', 'GL1_R1', 'YL_R1', 'RL1_R1', 'CCH_R1', '63Q-220V_R'] },
+                    { name: "群組: [52C/a, 52C/b1, 63D/C, CS/S, L1, WL]", points: ['L1_L', '52C/b1_L1', '52C/a_L1', 'WL_R2', 'CS/S_R', '63D/C_R'] },
+                    { name: "群組: [52C/b1, CCH, GL2]", points: ['52C/b1_L2', 'GL2_R2', 'CCH_R2'] },
+                    { name: "群組: [CS/ON, DT-8-C, DT]", points: ['DT_L', 'DT-8-C_L', 'CS/ON_R'] },
+                    { name: "群組: [52C/b2, OH]", points: ['52C/b2_L', 'OH_R1'] },
+                    { name: "群組: [52H, OH, RL2]", points: ['52H_L2', 'OH_R2', 'RL2_R2'] },
+                    { name: "群組: [51C/b, T1/a, T1]", points: ['T1/a_L1', 'T1_L2', '51C/b_R'] },
+                    { name: "群組: [52CF, 52F/a, DT/1, T1/a, T2/a, T2]", points: ['T1/a_L2', '52CF_L2', 'DT/1_L', 'T2_R', 'T2/a_R', '52F/a_R'] },
+                    { name: "群組: [DT-5-b, R1/b]", points: ['DT-5-b_L', 'R1/b_R'] },
+                    { name: "群組: [R1/b, 23C/C]", points: ['R1/b_L', '23C/C_R'] },
+                    { name: "群組: [23C/b, LSV]", points: ['23C/b_L', 'LSV_R'] },
+                    { name: "群組: [23C/a, GL1]", points: ['23C/a_L', 'GL1_R2'] },
+                    { name: "群組: [DT-6-a, 52C/b2]", points: ['DT-6-a_L', '52C/b2_R'] },
+                    { name: "群組: [T2/a, 52C, RL1]", points: ['T2/a_L', '52C_R', 'RL1_R2'] },
+                    { name: "群組: [52F, 52F/a, DT/3]", points: ['52F_L2', '52F/a_L', 'DT/3_R'] },
+                    { name: "群組: [52C/a, 63Q/1]", points: ['52C/a_L2', '63Q/1_R'] },
+                    { name: "群組: [63D/b, 63Q/L2]", points: ['63D/b_L', '63Q/L2_R'] },
+                    { name: "群組: [63Q/L1, 51F/C]", points: ['63Q/L1_L', '51F/C_R'] },
+                    { name: "群組: [51F/b, 51CF/C]", points: ['51F/b_L', '51CF/C_R'] },
+                    { name: "群組: [51CF/b, 51C/C]", points: ['51CF/b_L', '51C/C_R'] },
+                    { name: "群組: [63D/a, 51CF/a, 51C/a, R1, 63Q/a, 51F/a, YL]", points: ['63D/a_L', '51CF/a_L', '51C/a_L', 'R1_L2', '63Q/a_R', '51F/a_R', 'YL_R2'] }
+                ]
+            },
             freezer: {
                 left: ['DF-1', 'DF-2', '52CF-1', '52CF-2', '52F-1', '52F-2', '52F-3', '52F-4', '52C-1', '52C-2', '52C-3', '52C-4', '52C-5', '52C-6', '52C-7', '52C-8', '52H-1', '52H-2', 'R1-1', 'R1-2', 'R1-3', 'R1-4', 'T1-1', 'T1-2', 'T1-3', 'T1-4', 'T2-1', 'T2-2', 'T2-3', 'T2-4', 'DT-1', 'DT-2', 'DT-3', 'DT-4', 'DT-5', 'DT-6', 'DT-7', '51CF-1', '51CF-2', '51CF-3', '51F-1', '51F-2', '51F-3', '51C-1', '51C-2', '51C-3'],
                 right: ['WL-1', 'WL-2', 'RL1-1', 'RL1-2', 'GL1-1', 'GL1-2', 'YL-1', 'YL-2', 'GL2-1', 'GL2-2', 'RL2-1', 'RL2-2', 'CS-1', 'CS-2', 'LSV-1', 'LSV-2', '63D-1', '63D-2', '63D-3', '63Q-1', '63Q-2', '63Q-3', '63Q-4', '63Q-5', 'CCH-1', 'CCH-2', 'OH-1', 'OH-2', '23C-1', '23C-2', '23C-3'],
@@ -202,7 +276,6 @@
             }
         };
 
-        // 
         let activeMode = 'chiller';
         let leftTerminals = circuitData[activeMode].left;
         let rightTerminals = circuitData[activeMode].right;
@@ -216,7 +289,6 @@
         let firstSelected = null; 
         let connections = [];
 
-        // ===  ===
         function switchMode() {
             activeMode = document.getElementById('mode-select').value;
             leftTerminals = circuitData[activeMode].left;
@@ -228,7 +300,6 @@
             initTerminals();
         }
 
-        // ===  ===
         function formatTime(seconds) { 
             const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); 
             const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0'); 
@@ -238,14 +309,12 @@
         
         function toggleTimer(forceStart = false) {
             const btn = document.getElementById('start-pause-btn');
-            // 
             if (isTimerRunning && !forceStart) { 
                 clearInterval(timerInterval); 
                 isTimerRunning = false; 
                 btn.innerText = "繼續"; 
                 btn.style.backgroundColor = "#38a169"; 
             }
-            // 
             else if (!isTimerRunning) { 
                 timerInterval = setInterval(() => { 
                     elapsedSeconds++; 
@@ -267,12 +336,40 @@
             btn.style.backgroundColor = "#4a5568"; 
         }
 
-        // ===  ===
+        function undoWire() {
+            if (connections.length > 0) {
+                connections.pop();
+                updateWireCount();
+                drawLines();
+                if (firstSelected) { 
+                    firstSelected.classList.remove('selected'); 
+                    firstSelected = null; 
+                }
+            } else {
+                alert("目前畫面上已經沒有線可以退回囉！");
+            }
+        }
+
+        function clearColor() {
+            const initialLength = connections.length;
+            connections = connections.filter(conn => conn.color !== currentColor);
+            
+            if (connections.length === initialLength) {
+                alert("畫面上沒有你目前選定的顏色線喔！");
+            } else {
+                updateWireCount();
+                drawLines();
+                if (firstSelected) { 
+                    firstSelected.classList.remove('selected'); 
+                    firstSelected = null; 
+                }
+            }
+        }
+
         function initTerminals() {
             const leftCol = document.getElementById('col-left'); 
             const rightCol = document.getElementById('col-right');
             
-            // 
             leftCol.innerHTML = '';
             rightCol.innerHTML = '';
 
@@ -310,9 +407,8 @@
         }
         
         function clickTerminal(element) {
-            // 
             if (elapsedSeconds === 0 && !isTimerRunning) {
-                toggleTimer(true); // 
+                toggleTimer(true); 
             }
 
             if (!firstSelected) { 
@@ -387,10 +483,9 @@
             if (firstSelected) { firstSelected.classList.remove('selected'); firstSelected = null; } 
         }
 
-        // ===  ===
         function checkAnswers() {
             if (connections.length === 0) { alert("目前沒有任何接線喔！請完成配線後再報驗。"); return; }
-            if (isTimerRunning) toggleTimer(); // 報驗時暫停時間
+            if (isTimerRunning) toggleTimer();
             
             let adjList = {}; 
             connections.forEach(conn => { 
@@ -459,7 +554,7 @@
                 titleElement.style.color = "#28a745"; 
                 reportHTML = `<div style="font-size: 15px; font-weight:bold; margin-bottom: 15px; color:#2b6cb0;">⏱ 總耗時：${formatTime(elapsedSeconds)} | 🧵 總用線：${connections.length} 條</div><div style="font-size: 14px; font-weight:bold; margin-bottom: 15px;">控制迴路邏輯正確，所有 ${standardNodes.length} 個電氣節點都已導通，且無短路。</div>` + reportHTML; 
             } else { 
-                titleElement.innerHTML = "🔧 報驗失敗：需除錯與修正 (張老師離寫報告不遠囉!)"; 
+                titleElement.innerHTML = "🔧 報驗失敗：需除錯與修正"; 
                 titleElement.style.color = "#dc3545"; 
                 reportHTML = `<div style="font-weight:bold; margin-bottom: 15px;">完成進度: ${matchedCount} / ${standardNodes.length} 個節點正確。請參考下方報告修正：</div>` + reportHTML; 
             }
@@ -474,7 +569,6 @@
             document.getElementById('result-modal').style.display = 'none'; 
         }
         
-        // 
         initTerminals(); 
         window.addEventListener('resize', drawLines);
     </script>
