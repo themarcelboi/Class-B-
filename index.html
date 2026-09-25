@@ -3,10 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>冷凍空調乙級 模擬器</title>
+    <title>冷凍空調乙級</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f4f9; margin: 0; padding: 10px; display: flex; flex-direction: column; align-items: center; }
         
+        /* ===== 密碼鎖定畫面設定 ===== */
+        #lock-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(26, 54, 93, 0.98); z-index: 99999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            color: white;
+        }
+        .lock-box {
+            background: white; color: #333; padding: 40px; border-radius: 12px;
+            text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            width: 85%; max-width: 350px;
+        }
+        .lock-box h2 { margin-top: 0; color: #1a365d; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px;}
+        .lock-box input { 
+            padding: 12px; font-size: 18px; margin: 20px 0 10px 0; width: 90%; 
+            border: 2px solid #cbd5e1; border-radius: 6px; text-align: center; font-weight: bold; letter-spacing: 2px;
+            box-sizing: border-box;
+        }
+        .lock-box button { 
+            padding: 12px 20px; font-size: 16px; background: #2b6cb0; color: white; 
+            border: none; border-radius: 6px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.2s;
+            box-sizing: border-box;
+        }
+        .lock-box button:hover { background: #1a365d; }
+        #pwd-error { color: #dc3545; font-size: 14px; font-weight: bold; margin-top: 10px; display: none; }
+
+        /* ===== 背景浮水印設定 ===== */
         body::before {
             content: "中彰投分署";
             position: fixed;
@@ -49,11 +76,18 @@
             body::before { font-size: 35px; left: 2%; letter-spacing: 10px; }
             body::after { font-size: 30px; right: 2%; letter-spacing: 5px; line-height: 1.2;}
         }
-        
+        /* ===== 浮水印設定結束 ===== */
         
         .controls-container { position: sticky; top: 5px; margin-bottom: 15px; width: 100%; max-width: 800px; background: white; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); z-index: 100; display: flex; flex-direction: column; overflow: hidden; box-sizing: border-box; }
         
-        .mode-selector-bar { background-color: #e2e8f0; padding: 10px 15px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #cbd5e1; }
+        /* ===== 標題與左上角切換鈕 ===== */
+        .main-header { position: relative; background-color: #e2e8f0; color: #1a365d; text-align: center; padding: 15px 15px 5px 15px; font-size: 20px; font-weight: 900; letter-spacing: 2px; border-bottom: 1px solid #cbd5e1; display: flex; justify-content: center; align-items: center; }
+        .header-title { margin: 0 auto; }
+        .toggle-container { position: absolute; left: 15px; display: flex; background: #cbd5e1; border-radius: 6px; overflow: hidden; border: 1px solid #94a3b8; }
+        .cat-btn { padding: 5px 12px; font-size: 14px; font-weight: bold; border: none; cursor: pointer; background: transparent; color: #475569; transition: 0.2s; }
+        .cat-btn.active { background: #1a365d; color: white; }
+
+        .mode-selector-bar { background-color: #e2e8f0; padding: 10px 15px 15px 15px; display: flex; align-items: center; justify-content: center; border-bottom: 2px solid #cbd5e1; }
         .mode-selector-bar select { width: 100%; max-width: 400px; padding: 8px 12px; font-size: 16px; font-weight: bold; border-radius: 6px; border: 2px solid #1a365d; background-color: #fff; color: #1a365d; cursor: pointer; outline: none; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         
         .status-bar { background-color: #1a365d; color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: bold; flex-wrap: wrap; gap: 10px; }
@@ -85,7 +119,9 @@
         .correct-text { color: #28a745; font-weight: bold; }
         .error-text { color: #dc3545; font-weight: bold; }
         
-        @media (max-width: 480px) { 
+        @media (max-width: 650px) { 
+            .main-header { flex-direction: column; gap: 10px; font-size: 16px; padding: 15px; }
+            .toggle-container { position: relative; left: 0; margin-bottom: 5px; }
             .terminal { width: 55px; font-size: 10px; padding: 3px 4px; } 
             .status-bar { flex-direction: column; text-align: center; } 
             .wiring-board { padding: 15px 1%; } 
@@ -95,15 +131,30 @@
 </head>
 <body>
 
+    <!-- 密碼鎖定畫面 -->
+    <div id="lock-screen">
+        <div class="lock-box">
+            <h2>🔒 模擬器已鎖定</h2>
+            <p style="color: #4a5568; font-size: 14px;">請輸入授權密碼以進入系統</p>
+            <input type="password" id="pwd-input" placeholder="輸入密碼">
+            <button onclick="checkPwd()">確認登入</button>
+            <div id="pwd-error">密碼錯誤，請重新確認！</div>
+        </div>
+    </div>
+
     <div class="controls-container">
+        <!-- 頂部標題區塊與題庫切換按鈕 -->
+        <div class="main-header">
+            <div class="toggle-container">
+                <button id="btn-y1" class="cat-btn" onclick="setCategory('Y1')">乙一</button>
+                <button id="btn-y2" class="cat-btn" onclick="setCategory('Y2')">乙二</button>
+            </div>
+            <div class="header-title">中彰投分署 綠能智慧冷凍空調班 第一期</div>
+        </div>
         
+        <!-- 下拉選單區塊 (選項會由 JS 自動產生) -->
         <div class="mode-selector-bar">
-            <select id="mode-select" onchange="switchMode()">
-                <option value="chiller" selected>中訓 乙一 Y-Y</option>
-                <option value="freezer">中訓 乙一 冷凍冷藏</option>
-                <option value="chiller_image">桃訓 乙一 Y-Y</option>
-                <option value="freezer_image">桃訓 乙一 冷凍冷藏</option>
-            </select>
+            <select id="mode-select" onchange="switchMode()"></select>
         </div>
 
         <div class="status-bar">
@@ -138,9 +189,8 @@
         <div class="terminal-column" id="col-right"></div>
     </div>
 
-    
+    <!-- 頁尾開發者資訊 -->
     <div style="text-align: center; margin-top: 30px; margin-bottom: 20px; color: #718096; font-size: 14px; font-weight: bold; letter-spacing: 1px; line-height: 1.8;">
-        中彰投分署 綠能智慧冷凍空調班 第一期<br>
         指導老師：張軒齊 老師、蔡淨英 老師、黃世昌 老師、林茗富 老師 ｜ 學生：陳宣澄
     </div>
 
@@ -152,8 +202,73 @@
     </div>
 
     <script>
-        
+        // ===================================================================
+        // 🔑 系統密碼設定區 (每半年需要更改密碼時，請修改引號內的文字) 🔑
+        // ===================================================================
+        const SYSTEM_PASSWORD = "GUIBD164"; 
+        // ===================================================================
+
+        // 檢查登入狀態邏輯
+        if (localStorage.getItem("hvac_auth") === SYSTEM_PASSWORD) {
+            document.getElementById("lock-screen").style.display = "none";
+        }
+
+        function checkPwd() {
+            const input = document.getElementById("pwd-input").value;
+            if (input === SYSTEM_PASSWORD) {
+                localStorage.setItem("hvac_auth", SYSTEM_PASSWORD);
+                document.getElementById("lock-screen").style.display = "none";
+            } else {
+                document.getElementById("pwd-error").style.display = "block";
+                document.getElementById("pwd-input").value = "";
+            }
+        }
+
+        // 支援按 Enter 鍵直接登入
+        document.getElementById('pwd-input').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') checkPwd();
+        });
+
+        // ==========================================
+        // ===== 題庫選單與分類邏輯 =====
+        // ==========================================
+        const categoryOptions = {
+            'Y1': [
+                { value: 'chiller', text: '中訓 乙一 Y-Y' },
+                { value: 'freezer', text: '中訓 乙一 冷凍冷藏' },
+                { value: 'chiller_image', text: '桃訓 乙一 Y-Y' },
+                { value: 'freezer_image', text: '桃訓 乙一 冷凍冷藏' }
+            ],
+            'Y2': [
+                { value: 'teco_ty', text: '桃訓 乙二 東元' },
+                { value: 'tatung_ty', text: '桃訓 乙二 大同' },
+                { value: 'hitachi_ty', text: '桃訓 乙二 日立' }
+            ]
+        };
+
+        function setCategory(cat) {
+            document.getElementById('btn-y1').classList.remove('active');
+            document.getElementById('btn-y2').classList.remove('active');
+            if(cat === 'Y1') document.getElementById('btn-y1').classList.add('active');
+            else document.getElementById('btn-y2').classList.add('active');
+
+            const select = document.getElementById('mode-select');
+            select.innerHTML = '';
+            categoryOptions[cat].forEach(opt => {
+                let option = document.createElement('option');
+                option.value = opt.value;
+                option.innerText = opt.text;
+                select.appendChild(option);
+            });
+            
+            switchMode();
+        }
+
+        // ==========================================
+        // ===== 核心資料庫 =====
+        // ==========================================
         const circuitData = {
+            // ===== 乙一題庫 =====
             chiller_image: {
                 left: ['R_L', 'S_L', 'T_L', 'K1_L', 'K3_L', 'L1_L1', 'L3_L', 'G_L', 'L1_L2', 'L2_L', 'FS_L1', 'FS_L2', '26W_L1', '26W_L2', '63Q-1_L', '63Q-5_L', '63Q-220V_L', 'CCH_L1', 'CCH_L2', '52C1-a_L1', '52C1-a_L2', '52C2-a_L1', '52C2-a_L2', '3X/a1_L1', '3X/a1_L2', '3X/a2_L1', '3X/a2_L2', '63Q/L2_L', '63Q/L1_L', '63D_L1', '63D_L2', '51C1_L1', '51C1_L2', '51C2_L1', '51C2_L2', '3X_L1', '3X_L2', '23C-U_L', '23C-V_L', '23C-L1_L', '23C-H2_L', '52C1_L1', '52C1_L2', '2C1_L1', '2C1_L2', '2C1/a_L1', '2C1/a_L2', '52C2_L1', '52C2_L2', '20S_L1', '20S_L2', '2C2_L1', '2C2_L2', '20C1_L1', '20C1_L2', '20C2_L1', '20C2_L2', '2C2/C_L', '2C2/b_L', '2C2/a_L'],
                 right: ['R_R1', 'S_R', 'T_R1', 'V1_R1', 'V2_R1', 'V1_R2', 'V2_R2', 'R_R2', 'T_R2', 'A1_R1', 'A2_R1', 'A1_R2', 'A2_R2', 'GL_R1', 'GL_R2', 'RL1_R1', 'RL1_R2', 'RL2_R1', 'RL2_R2', 'WL_R1', 'WL_R2', 'ON_R1', 'ON_R2', 'OFF_R1', 'OFF_R2'],
@@ -273,13 +388,81 @@
                     { name: "【52F 冷庫風扇電磁開關】 延遲並聯點", points: ['DT-7', '52F-4', '52F-1'] },
                     { name: "【DF 栓形保險絲】 T相總迴路 (中性線)", points: ['DF-2', 'WL-2', 'GL2-2', 'CCH-2', 'DT-2', '52H-2', 'RL2-2', 'LSV-2', 'GL1-2', '63Q-2', 'R1-2', 'YL-2', 'T1-2', 'T2-2', '52C-2', 'RL1-2', '52CF-2', '52F-2'] }
                 ]
-            }
+            },
+
+            // ===== 乙二題庫模組 =====
+            teco_ty: {
+                left: ['F1_L', 'F2_L', '47R_L1', '47R_L2', '51C_L1', '51C_L2', '52F_L1', '52F_L2', '52C1_L1', '52C1_L2', '51F_L', '63PW_L', '63H1_L', '63L1_L', '51C1_L', '88P_L1', '88P_L2', 'ML_L1', 'ML_L2'],
+                right: ['L_R', 'M_R', '52C1-M_R1', '52C1-M_R2', '52F-M_R1', '52F-M_R2', '49F_R1', '49F_R2', '63H_R1', '63H_R2', '63L_R1', '63L_R2', 'ML-M_R1', 'ML-M_R2'],
+                nodes: [
+                    { name: "群組: [F1, L]", points: ['F1_L', 'L_R'] },
+                    { name: "群組: [F2, 47R]", points: ['F2_L', '47R_L1'] },
+                    { name: "群組: [47R, M]", points: ['47R_L2', 'M_R'] },
+                    { name: "群組: [51C, 88P]", points: ['51C_L1', '88P_L1'] },
+                    { name: "群組: [51C, 63PW]", points: ['51C_L2', '63PW_L'] },
+                    { name: "群組: [52F, 52F-M]", points: ['52F_L1', '52F-M_R1'] },
+                    { name: "群組: [52F, 52F-M]", points: ['52F_L2', '52F-M_R2'] },
+                    { name: "群組: [52C1, 52C1-M]", points: ['52C1_L1', '52C1-M_R1'] },
+                    { name: "群組: [52C1, 52C1-M]", points: ['52C1_L2', '52C1-M_R2'] },
+                    { name: "群組: [51F, 49F]", points: ['51F_L', '49F_R1'] },
+                    { name: "群組: [63H1, 63H]", points: ['63H1_L', '63H_R1'] },
+                    { name: "群組: [63L1, 63L]", points: ['63L1_L', '63L_R2'] },
+                    { name: "群組: [51C1, 88P, 49F]", points: ['51C1_L', '88P_L2', '49F_R2'] },
+                    { name: "群組: [ML, ML-M]", points: ['ML_L1', 'ML-M_R1'] },
+                    { name: "群組: [ML, ML-M]", points: ['ML_L2', 'ML-M_R2'] },
+                    { name: "群組: [63H, 63L]", points: ['63H_R2', '63L_R1'] }
+                ]
+            },
+            tatung_ty: {
+                left: ['F1_L', 'F2_L', '52C_L1', '52C_L2', 'MF_L1', 'MF_L2', '88P_L1', '88P_L2', '47C_L1', '47C_L2', '51C_L1', '51C_L2', '63D_L1', '63D_L2'],
+                right: ['ACL_R', 'ACN_R', 'ALM_R', 'YL_R1', 'YL_R2', 'MCI_R', '52F_R', 'FS_R1', 'FS_R2', 'EMG_R1', 'EMG_R2', 'DI1_R1', 'DI1_R2'],
+                nodes: [
+                    { name: "群組: [F1, ACL]", points: ['F1_L', 'ACL_R'] },
+                    { name: "群組: [F2, ACN, 52C上, MF上, YL下]", points: ['F2_L', 'ACN_R', '52C_L1', 'MF_L1', 'YL_R2'] },
+                    { name: "群組: [52C, MCI]", points: ['52C_L2', 'MCI_R'] },
+                    { name: "群組: [MF, 52F]", points: ['MF_L2', '52F_R'] },
+                    { name: "群組: [88P, FS]", points: ['88P_L1', 'FS_R1'] },
+                    { name: "群組: [88P, FS]", points: ['88P_L2', 'FS_R2'] },
+                    { name: "群組: [47C, EMG]", points: ['47C_L1', 'EMG_R1'] },
+                    { name: "群組: [47C, EMG]", points: ['47C_L2', 'EMG_R2'] },
+                    { name: "群組: [51C, DI1]", points: ['51C_L1', 'DI1_R1'] },
+                    { name: "群組: [51C, 63D]", points: ['51C_L2', '63D_L1'] },
+                    { name: "群組: [63D, DI1]", points: ['63D_L2', 'DI1_R2'] },
+                    { name: "群組: [ALM, YL]", points: ['ALM_R', 'YL_R1'] }
+                ]
+            },
+            hitachi_ty: {
+                left: ['R_L', 'S_L', '47C_L1', '47C_L2', 'PCN1-1_L', 'PCN1-3_L', 'PCN1-5_L', 'PCN1-7_L', 'CN101-1_L', 'CN101-3_L', '51C_L1', '51C_L2', '52C-13_L', '52C-14_L', '52C_L1', '52C_L2', 'PCN4-1_L', 'PCN4-3_L', '88P_L1', '88P_L2'],
+                right: ['EF3_R', 'EF4_R', 'CN501-1_R', 'CN501-3_R', '26W_R1', '26W_R2', '63H_R1', '63H_R2', '26TL_R1', '26TL_R2', 'PCN7-1_R', 'PCN7-3_R', '52FT_R1', '52FT_R2'],
+                nodes: [
+                    { name: "群組: [R, EF3]", points: ['R_L', 'EF3_R'] },
+                    { name: "群組: [S, 47C]", points: ['S_L', '47C_L1'] },
+                    { name: "群組: [47C, EF4]", points: ['47C_L2', 'EF4_R'] },
+                    { name: "群組: [PCN1-1, CN101-3, 51C, 63H, 26TL]", points: ['PCN1-1_L', 'CN101-3_L', '51C_L1', '63H_R2', '26TL_R2'] },
+                    { name: "群組: [PCN1-3, 26TL]", points: ['PCN1-3_L', '26TL_R1'] },
+                    { name: "群組: [PCN1-5, 51C]", points: ['PCN1-5_L', '51C_L2'] },
+                    { name: "群組: [PCN1-7, 63H]", points: ['PCN1-7_L', '63H_R1'] },
+                    { name: "群組: [CN101-1, PCN7-3, 52C]", points: ['CN101-1_L', 'PCN7-3_R', '52C_L2'] },
+                    { name: "群組: [52C-13, CN501-3]", points: ['52C-13_L', 'CN501-3_R'] },
+                    { name: "群組: [52C-14, CN501-1]", points: ['52C-14_L', 'CN501-1_R'] },
+                    { name: "群組: [52C, PCN7-1]", points: ['52C_L1', 'PCN7-1_R'] },
+                    { name: "群組: [PCN4-1, 26W]", points: ['PCN4-1_L', '26W_R1'] },
+                    { name: "群組: [PCN4-3, 26W]", points: ['PCN4-3_L', '26W_R2'] },
+                    { name: "群組: [88P, 52FT]", points: ['88P_L1', '52FT_R1'] },
+                    { name: "群組: [88P, 52FT]", points: ['88P_L2', '52FT_R2'] }
+                ]
+            },
+            
+            
+            hitachi_tc: { left: [], right: [], nodes: [] },
+            tatung_tc: { left: [], right: [], nodes: [] },
+            info_tc: { left: [], right: [], nodes: [] }
         };
 
-        let activeMode = 'chiller';
-        let leftTerminals = circuitData[activeMode].left;
-        let rightTerminals = circuitData[activeMode].right;
-        let standardNodes = circuitData[activeMode].nodes;
+        let activeMode = '';
+        let leftTerminals = [];
+        let rightTerminals = [];
+        let standardNodes = [];
 
         let timerInterval = null; 
         let elapsedSeconds = 0; 
@@ -291,14 +474,16 @@
 
         function switchMode() {
             activeMode = document.getElementById('mode-select').value;
-            leftTerminals = circuitData[activeMode].left;
-            rightTerminals = circuitData[activeMode].right;
-            standardNodes = circuitData[activeMode].nodes;
+            leftTerminals = circuitData[activeMode].left || [];
+            rightTerminals = circuitData[activeMode].right || [];
+            standardNodes = circuitData[activeMode].nodes || [];
             
             clearWires();
             resetTimer();
             initTerminals();
         }
+
+        setCategory('Y1');
 
         function formatTime(seconds) { 
             const h = Math.floor(seconds / 3600).toString().padStart(2, '0'); 
@@ -569,7 +754,6 @@
             document.getElementById('result-modal').style.display = 'none'; 
         }
         
-        initTerminals(); 
         window.addEventListener('resize', drawLines);
     </script>
 </body>
